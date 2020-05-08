@@ -1,9 +1,11 @@
 """ Pgfplots code for DataFrame objects
 
 Currently, it supports scatter plots and cactus plots.
+
+The generated code is not enclosed in the `tikzpicture` environment.
 """
 
-defaults_sc = {
+def_opts_scatter = {
     "mark size" : "1.2pt",
     "axis x line*" : "bottom",
     "axis y line*" : "left",
@@ -20,14 +22,14 @@ defaults_sc = {
 }
 
 # This is defaults for \addplot in the scatter plot, not \axis
-scmarks_defaults = {
+def_opts_scatter_marks = {
     "scatter" : True,
     "scatter src" : "explicit",
     "only marks" : True,
     "mark options" : "{fill opacity=.3, draw opacity=0}",
 }
 
-defaults_cactus = {
+def_opts_cactus = {
     "very thick" : True,
     "no markers" : True,
     "axis x line*" : "bottom",
@@ -49,7 +51,7 @@ defaults_cactus = {
     "every axis legend/.append style": "{cells={anchor=west}, draw=none}",
 }
 
-pgfplots_defaults = {
+def_opts_pgfplots = {
     # general
     "compat" : "newest",
 }
@@ -82,22 +84,28 @@ def scatter(df, log=None, tikz_hook="", marks_dict={}, pgfplotsset_dict={}, **kw
           Dict of pgfplots keys given to `every mark/.append style` which is given
           to `\addplot`'s options insread of `axis`.
       **kwargs : will be supplied to axis options after "TikZification"
+
+
+    Returns
+    -------
+    Multiline string with the pgfplots code for scatter plot. This needs to be placed
+    inside `tikzpicture` environment.
     """
     x = kwargs.pop("x", df.columns.values[0])
     y = kwargs.pop("y", df.columns.values[1])
     c = kwargs.pop("c", None)
     diagonal = kwargs.pop("diagonal", True)
 
-    args = defaults_sc.copy()
+    args = def_opts_scatter.copy()
     args["xlabel"] = f"{{{x}}}"
     args["ylabel"] = f"{{{y}}}"
     args.update(kwargs)
 
-    pgfplots_args = pgfplots_defaults.copy()
+    pgfplots_args = def_opts_pgfplots.copy()
     pgfplots_args.update(pgfplotsset_dict)
 
-    scmarks_args = scmarks_defaults.copy()
-    scmarks_args["every mark/.append style"] = f"{{{tikzify_dict(marks_dict)}}}"
+    marks_args = def_opts_scatter_marks.copy()
+    marks_args["every mark/.append style"] = f"{{{tikzify_dict(marks_dict)}}}"
 
     # Check the valid content of `log`
     axis = 'axis'
@@ -117,12 +125,12 @@ def scatter(df, log=None, tikz_hook="", marks_dict={}, pgfplotsset_dict={}, **kw
     # \addplot options.
     if c is None:
         coordinates = [f'({vx},{vy}) [1]%\n' for vx,vy in df.reindex(axis=1)[[x,y]].to_numpy()]
-        scmarks_args["scatter"] = False
+        marks_args["scatter"] = False
         if kwargs.get("colorbar"):
             raise ValueError("When colorbar requested, column for color has to be specified by `c`.")
     else:
         coordinates = [f'({vx},{vy}) [{vc}]%\n' for vx,vy,vc in df.reindex(axis=1)[[x,y,c]].to_numpy()]
-        scmarks_args["scatter"] = True
+        marks_args["scatter"] = True
 
     if diagonal:
         start_line = 0 if log is None else 1
@@ -136,7 +144,7 @@ def scatter(df, log=None, tikz_hook="", marks_dict={}, pgfplotsset_dict={}, **kw
 {tikzify_dict(args, 2)}%
 ]
 \\addplot[
-{tikzify_dict(scmarks_args, 2)}%
+{tikzify_dict(marks_args, 2)}%
 ] coordinates
   {{{"  ".join(coordinates)}}};%
 {line}%
@@ -169,17 +177,15 @@ def cactus(df, exclude_treshold=None, log=None, pgfplotsset_dict={}, **kwargs):
         Dict of pgfplots keys to be set, after TikZification supplied to `\pgfplotsset`
     **kwargs : will be supplied to axis options after "TikZification"
 
-
     Returns
     -------
     Multiline string with the pgfplots code for cactus plot. This needs to be placed
     inside `tikzpicture` environment.
-
     """
-    args = defaults_cactus.copy()
+    args = def_opts_cactus.copy()
     args.update(kwargs)
 
-    pgfplots_args = pgfplots_defaults.copy()
+    pgfplots_args = def_opts_pgfplots.copy()
     pgfplots_args.update(pgfplotsset_dict)
 
     # Check the valid content of `log`
