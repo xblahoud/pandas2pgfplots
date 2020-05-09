@@ -4,6 +4,7 @@ Currently, it supports scatter plots and cactus plots.
 
 The generated code is not enclosed in the `tikzpicture` environment.
 """
+from collections import Mapping
 
 def_opts_scatter = {
     "mark size" : "1.2pt",
@@ -17,8 +18,8 @@ def_opts_scatter = {
     "ymin" : 0,
     # colorbar
     "colorbar/width" : ".1cm",
-    "colorbar style" : "{line width=.1pt}",
-    "colorbar shift/.style" : r"{xshift=.1cm}",
+    "colorbar style" : {"line width" : ".1pt"},
+    "colorbar shift/.style" : {"xshift" : ".1cm"},
 }
 
 # This is defaults for \addplot in the scatter plot, not \axis
@@ -26,7 +27,8 @@ def_opts_scatter_marks = {
     "scatter" : True,
     "scatter src" : "explicit",
     "only marks" : True,
-    "mark options" : "{fill opacity=.3, draw opacity=0}",
+    "mark options" : {"fill opacity" : .3,
+                      "draw opacity" : 0},
 }
 
 def_opts_cactus = {
@@ -48,7 +50,11 @@ def_opts_cactus = {
     "xmin" : 0,
     # Legends
     "legend pos" : "north west",
-    "every axis legend/.append style": "{cells={anchor=west}, draw=none}",
+    "every axis legend/.append style": {
+        "cells" : {
+            "anchor" : "west"
+        },
+        "draw" : "none"},
 }
 
 def_opts_pgfplots = {
@@ -99,10 +105,10 @@ def scatter(df, log=None, tikz_hook="", marks_dict={}, pgfplotsset_dict={}, **kw
     args = def_opts_scatter.copy()
     args["xlabel"] = f"{{{x}}}"
     args["ylabel"] = f"{{{y}}}"
-    args.update(kwargs)
+    deep_update(args,kwargs)
 
     pgfplots_args = def_opts_pgfplots.copy()
-    pgfplots_args.update(pgfplotsset_dict)
+    deep_update(pgfplots_args,pgfplotsset_dict)
 
     marks_args = def_opts_scatter_marks.copy()
     marks_args["every mark/.append style"] = f"{{{tikzify_dict(marks_dict)}}}"
@@ -134,7 +140,7 @@ def scatter(df, log=None, tikz_hook="", marks_dict={}, pgfplotsset_dict={}, **kw
 
     if diagonal:
         start_line = 0 if log is None else 1
-        line = f'\\addplot[gray,domain={start_line}:{min(df.max(axis=0)[:2])+1}]{{x}};'
+        line = f'\\addplot[gray,domain={start_line}:{min(df.max(axis=0).loc[[x,y]])}]{{x}};'
     else:
         line = ""
 
@@ -183,10 +189,10 @@ def cactus(df, exclude_treshold=None, log=None, pgfplotsset_dict={}, **kwargs):
     inside `tikzpicture` environment.
     """
     args = def_opts_cactus.copy()
-    args.update(kwargs)
+    deep_update(args,kwargs)
 
     pgfplots_args = def_opts_pgfplots.copy()
-    pgfplots_args.update(pgfplotsset_dict)
+    deep_update(pgfplots_args,pgfplotsset_dict)
 
     # Check the valid content of `log`
     axis = 'axis'
@@ -247,7 +253,22 @@ def tikzify_dict(args, padding=0):
             res += f"{k}=true"
         elif v is None:
             res += f"{k}=none"
+        elif isinstance(v, Mapping):
+            res += f"{k}={{\n{tikzify_dict(v, padding+2)}{pad}}}"
         else:
             res += f"{k}={v}"
-        res += ",%\n"
+        res += ",\n"
     return res
+
+def deep_update(source, overrides):
+    """
+    Update a nested dictionary or similar mapping.
+    Modify ``source`` in place.
+    """
+    for key, value in overrides.items():
+        if isinstance(value, Mapping) and value:
+            returned = deep_update(source.get(key, {}), value)
+            source[key] = returned
+        else:
+            source[key] = overrides[key]
+    return source
