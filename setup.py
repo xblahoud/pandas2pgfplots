@@ -28,6 +28,7 @@ setup(
     ],
     packages=["pandas2pgfplots"],
     install_requires=[
-        'pandas>=0.24',
+        'pandas>=1.0',
+        'itikz'
     ]
 )

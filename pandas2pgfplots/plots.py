@@ -5,6 +5,7 @@ Currently, it supports scatter plots and cactus plots.
 The generated code is not enclosed in the `tikzpicture` environment.
 """
 from .utils import deep_update, tikzify_dict
+from .display import display_tikz
 
 def_opts_scatter = {
     "mark size" : "1.2pt",
@@ -61,6 +62,24 @@ def_opts_pgfplots = {
     # general
     "compat" : "newest",
 }
+
+
+class Plot(object):
+    """Wrapper class for the plots.
+
+    The main purpose of the object is visualization of the plots in Jupyter
+    notebooks. In normal Python console it should render as the pgfplots code.
+    """
+
+    def __init__(self, tikzcode):
+        self.tikzcode = tikzcode
+
+    def _repr_svg_(self):
+        SVG = display_tikz(self.tikzcode)
+        return SVG.data
+
+    def __repr__(self):
+        return self.tikzcode
 
 
 def scatter(df, log=None, tikz_hook="", marks_dict={}, pgfplotsset_dict={}, **kwargs):
@@ -157,7 +176,7 @@ def scatter(df, log=None, tikz_hook="", marks_dict={}, pgfplotsset_dict={}, **kw
 {tikz_hook}%
 \\end{{{axis}}}
 '''
-    return res
+    return Plot(res)
 
 
 def cactus(df, exclude_treshold=None, log=None, pgfplotsset_dict={}, **kwargs):
@@ -228,4 +247,4 @@ def cactus(df, exclude_treshold=None, log=None, pgfplotsset_dict={}, **kwargs):
 {plots}
 \\end{{{axis}}}
 '''
-    return res
+    return Plot(res)
