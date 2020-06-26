@@ -242,7 +242,6 @@ def tikzify_dict(args, padding=0):
 
     Returns a string with TikZ options
     """
-    #TODO expand to dicts recursively
     res = ""
     pad = " "*padding
     for k, v in args.items():
